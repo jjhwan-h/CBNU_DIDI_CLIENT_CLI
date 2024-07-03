@@ -21,7 +21,7 @@ export class Alice extends BaseAgent {
   }
 
   public static async build(walletName:string, walletPw:string): Promise<Alice> {
-    const alice = new Alice(9002, walletName, walletPw)
+    const alice = new Alice(3006, walletName, walletPw)
     await alice.initializeAgent()
     const record = await alice.getById(CustomRecord,"ether");
     if(!record){
@@ -100,7 +100,6 @@ export class Alice extends BaseAgent {
   }
 
   public async acceptCredentialOffer(credentialRecord: CredentialExchangeRecord) {
-    console.log(credentialRecord)
     await this.agent.credentials.acceptOffer({
       credentialRecordId: credentialRecord.id,
     })

@@ -35,6 +35,7 @@ export const runAlice = async () => {
 
 enum PromptOptions {
   ReceiveConnectionUrl = 'Receive connection invitation',
+  GetCredentials = 'Get Credentials',
   SendMessage = 'Send message',
   Exit = 'Exit',
   Restart = 'Restart',
@@ -65,7 +66,7 @@ export class AliceInquirer extends BaseInquirer {
   private async getPromptChoice() {
     if (this.alice.connectionRecordFaberId) return prompt([this.inquireOptions(this.promptOptionsString)])
 
-    const reducedOption = [PromptOptions.ReceiveConnectionUrl, PromptOptions.Exit, PromptOptions.Restart]
+    const reducedOption = [PromptOptions.ReceiveConnectionUrl, PromptOptions.Exit, PromptOptions.Restart, PromptOptions.GetCredentials]
     return prompt([this.inquireOptions(reducedOption)])
   }
 
@@ -80,6 +81,9 @@ export class AliceInquirer extends BaseInquirer {
       case PromptOptions.SendMessage:
         await this.message()
         break
+      case PromptOptions.GetCredentials:
+        await this.getCredentials()
+        break
       case PromptOptions.Exit:
         await this.exit()
         break
@@ -93,6 +97,15 @@ export class AliceInquirer extends BaseInquirer {
     await this.processAnswer()
   }
 
+  public async getCredentials(){
+    const credentials = await this.alice.agent.credentials.getAll();
+
+    credentials.forEach((el)=>{
+      console.log(el.credentialAttributes)
+      console.log(el.credentials)
+    })
+  }
+
   public async acceptCredentialOffer(credentialRecord: CredentialExchangeRecord) {
     const confirm = await prompt([this.inquireConfirmation(Title.CredentialOfferTitle)])
     if (confirm.options === ConfirmOptions.No) {
@@ -100,6 +113,7 @@ export class AliceInquirer extends BaseInquirer {
     } else if (confirm.options === ConfirmOptions.Yes) {
       await this.alice.acceptCredentialOffer(credentialRecord)
     }
+    
   }
 
   public async acceptProofRequest(proofRecord: ProofExchangeRecord) {
@@ -116,7 +130,6 @@ export class AliceInquirer extends BaseInquirer {
     const getUrl = await prompt([this.inquireInput(title)])
     await this.alice.acceptConnection(getUrl.input)
     if (!this.alice.connected) return
-
     this.listener.credentialOfferListener(this.alice, this)
     this.listener.proofRequestListener(this.alice, this)
   }
