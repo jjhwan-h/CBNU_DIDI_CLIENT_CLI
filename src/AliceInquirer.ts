@@ -7,7 +7,7 @@ import { prompt } from 'inquirer'
 import { Alice } from './Alice'
 import { BaseInquirer, ConfirmOptions } from './BaseInquirer'
 import { Listener } from './Listener'
-import { Title, greenText } from './OutputClass'
+import { Title, greenText, purpleText } from './OutputClass'
 
 import * as readline from 'readline';
 
@@ -28,7 +28,7 @@ const questionAsync=(prompt:string):Promise<string>=>{
 
 export const runAlice = async () => {
   clear()
-  console.log(textSync('DIDI', { horizontalLayout: 'full' }))
+  console.log(textSync('DIDI', { horizontalLayout: 'full', font:'Doh'}))
   const alice = await AliceInquirer.build()
   await alice.processAnswer()
 }
@@ -36,10 +36,11 @@ export const runAlice = async () => {
 enum PromptOptions {
   ReceiveConnectionUrl = 'Receive connection invitation',
   GetCredentials = 'Get Credentials',
+  DeleteCredentials = 'Delete Credentials',
   SendMessage = 'Send message',
+  GetPresentationRecord= 'Get Presentation Record',
   Exit = 'Exit',
-  Restart = 'Restart',
-  RequestSignIn = 'SignIn',
+  Restart = 'Restart'  
 }
 
 export class AliceInquirer extends BaseInquirer {
@@ -66,16 +67,18 @@ export class AliceInquirer extends BaseInquirer {
   private async getPromptChoice() {
     if (this.alice.connectionRecordFaberId) return prompt([this.inquireOptions(this.promptOptionsString)])
 
-    const reducedOption = [PromptOptions.ReceiveConnectionUrl, PromptOptions.Exit, PromptOptions.Restart, PromptOptions.GetCredentials]
+    const reducedOption = [PromptOptions.ReceiveConnectionUrl, PromptOptions.Exit, PromptOptions.Restart, PromptOptions.GetCredentials, PromptOptions.DeleteCredentials, PromptOptions.GetPresentationRecord]
     return prompt([this.inquireOptions(reducedOption)])
   }
 
   public async processAnswer() {
+
     const choice = await this.getPromptChoice()
     if (this.listener.on) return
 
     switch (choice.options) {
       case PromptOptions.ReceiveConnectionUrl:
+        clear()
         await this.connection()
         break
       case PromptOptions.SendMessage:
@@ -84,26 +87,59 @@ export class AliceInquirer extends BaseInquirer {
       case PromptOptions.GetCredentials:
         await this.getCredentials()
         break
+        
+      case PromptOptions.DeleteCredentials:
+        clear()
+        await this.deleteCredentials()
+        break
+      case PromptOptions.GetPresentationRecord:
+        await this.getPresentationRecord()
+        break
       case PromptOptions.Exit:
         await this.exit()
+        clear()
         break
-      // case PromptOptions.RequestSignIn:
-      //   await this.signIn()
-      //   break
       case PromptOptions.Restart:
         await this.restart()
         return
     }
+    
     await this.processAnswer()
   }
 
+  public async getPresentationRecord(){
+    const result = await this.alice.agent.proofs.getAll()
+
+    result.forEach((el)=>{
+      console.log(`\n${JSON.stringify(el)}\n`)
+    })
+    return
+  }
+  public async deleteCredentials(){
+    const hasCred = await this.getCredentials();
+    if(hasCred){
+      const title = Title.DeleteCredentialTitle;
+      const choice = await prompt([this.inquireInput(title)]);
+      await this.alice.agent.credentials.deleteById(choice.input);
+    }
+    else{
+      console.log(purpleText("\nYou do not have any Verifiable Credentials\n"))
+      return
+    }
+   
+  }
   public async getCredentials(){
     const credentials = await this.alice.agent.credentials.getAll();
-
+    const lenCred = credentials.length
+    if (lenCred==0){
+      return null
+    }
     credentials.forEach((el)=>{
-      console.log(el.credentialAttributes)
-      console.log(el.credentials)
+      console.log("[id]:",el.id);
+      console.log(el.credentialAttributes);
+      console.log("======================================\n");
     })
+    return lenCred
   }
 
   public async acceptCredentialOffer(credentialRecord: CredentialExchangeRecord) {
@@ -113,15 +149,21 @@ export class AliceInquirer extends BaseInquirer {
     } else if (confirm.options === ConfirmOptions.Yes) {
       await this.alice.acceptCredentialOffer(credentialRecord)
     }
-    
   }
 
-  public async acceptProofRequest(proofRecord: ProofExchangeRecord) {
+  public async acceptProofRequest (proofRecord: ProofExchangeRecord) {
+    const requestedCredentials = await this.alice.agent.proofs.selectCredentialsForRequest({
+      proofRecordId: proofRecord.id,
+    })
+    const requestAtrributes = requestedCredentials.proofFormats.anoncreds?.attributes;
+    
+    console.log(purpleText(`(\n\n제출될 VP : ${JSON.stringify(requestAtrributes?.name.credentialInfo.attributes)}`));
     const confirm = await prompt([this.inquireConfirmation(Title.ProofRequestTitle)])
     if (confirm.options === ConfirmOptions.No) {
       await this.alice.agent.proofs.declineRequest({ proofRecordId: proofRecord.id })
     } else if (confirm.options === ConfirmOptions.Yes) {
-      await this.alice.acceptProofRequest(proofRecord)
+      console.log(greenText(`VP 제출중...`))
+      await this.alice.acceptProofRequest(proofRecord,requestedCredentials)
     }
   }
 

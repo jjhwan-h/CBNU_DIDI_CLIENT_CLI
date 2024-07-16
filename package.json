@@ -4,8 +4,7 @@
     "private": true,
     "license": "Apache-2.0",
     "scripts": {
-        "alice": "ts-node src/AliceInquirer.ts",
-        "faber": "ts-node src/FaberInquirer.ts",
+        "client": "ts-node src/AliceInquirer.ts",
         "refresh": "rm -rf ./node_modules ./yarn.lock && yarn"
     },
     "dependencies": {
@@ -13,7 +12,6 @@
         "@hyperledger/aries-askar-nodejs": "^0.1.0",
         "@hyperledger/indy-vdr-nodejs": "^0.1.0",
         "dotenv": "^16.4.5",
-        "ethereumjs-wallet": "^1.0.2",
         "inquirer": "^8.2.5"
     },
     "devDependencies": {

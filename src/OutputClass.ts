@@ -20,6 +20,8 @@ export enum Title {
   ConfirmTitle = '\n\nAre you sure?',
   CredentialOfferTitle = '\n\nCredential offer received, do you want to accept it?',
   ProofRequestTitle = '\n\nProof request received, do you want to accept it?',
+  DeleteCredentialTitle='\n\nPlease attach and include the [id] number you want to delete.',
+  InvitationIsExist = '\n\n connection already exists. Do you want a new connection?'
 }
 
 export const greenText = (text: string, reset?: boolean) => {

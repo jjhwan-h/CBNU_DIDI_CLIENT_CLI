@@ -1,10 +1,10 @@
-import type { BaseRecordConstructor, ConnectionRecord, CredentialExchangeRecord, ProofExchangeRecord, TagsBase } from '@aries-framework/core'
+import type { BaseRecordConstructor, ConnectionRecord, CredentialExchangeRecord, ProofExchangeRecord, TagsBase,SelectCredentialsForProofRequestReturn } from '@aries-framework/core'
 
 import { BaseAgent } from './BaseAgent'
 import { greenText, Output, redText } from './OutputClass'
-import Wallet from 'ethereumjs-wallet'
 import {AskarStorageService} from '@aries-framework/askar'
 import { AgentContext, BaseRecord } from '@aries-framework/core';
+
 
 class CustomRecord extends BaseRecord{
   public getTags(): TagsBase{
@@ -23,11 +23,6 @@ export class Alice extends BaseAgent {
   public static async build(walletName:string, walletPw:string): Promise<Alice> {
     const alice = new Alice(3006, walletName, walletPw)
     await alice.initializeAgent()
-    const record = await alice.getById(CustomRecord,"ether");
-    if(!record){
-      await alice.createEtherWallet();
-    }
-    //await alice.deleteById('etherPrivate')
     return alice
   }
 
@@ -55,23 +50,6 @@ export class Alice extends BaseAgent {
     const res = await storage.delete(this.agent.context,record)
   }
 
-  private async createEtherWallet(){
-    const wallet = Wallet.generate();
-    try {
-      const privateKey = wallet.getPrivateKey().toString('hex');
-      const address = wallet.getAddress().toString('hex');
-      const record:BaseRecord = new CustomRecord();
-      record.id="ether";
-      record.metadata.set('etherPrivate',[privateKey])
-      record.metadata.set('etherAddress',[address])
-      this.save(record)
-      console.log('Ether지갑이 생성되었습니다.');
-      console.log('Private Key:', privateKey);
-      console.log('Address:', address);
-    } catch (error) {
-      console.log('Ether 지갑이 생성되지 않았습니다.');
-    }
-  }
   private async getConnectionRecord() {
     if (!this.connectionRecordFaberId) {
       throw Error(redText(Output.MissingConnectionRecord))
@@ -105,11 +83,8 @@ export class Alice extends BaseAgent {
     })
   }
 
-  public async acceptProofRequest(proofRecord: ProofExchangeRecord) {
-    const requestedCredentials = await this.agent.proofs.selectCredentialsForRequest({
-      proofRecordId: proofRecord.id,
-    })
-    console.log(requestedCredentials.proofFormats)
+  public async acceptProofRequest(proofRecord: ProofExchangeRecord, requestedCredentials:SelectCredentialsForProofRequestReturn) {
+
     await this.agent.proofs.acceptRequest({
       proofRecordId: proofRecord.id,
       proofFormats: requestedCredentials.proofFormats,

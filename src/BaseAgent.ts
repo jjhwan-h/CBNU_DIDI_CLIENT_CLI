@@ -6,10 +6,6 @@ import {
   AnonCredsCredentialFormatService,
   AnonCredsModule,
   AnonCredsProofFormatService,
-  LegacyIndyCredentialFormatService,
-  LegacyIndyProofFormatService,
-  V1CredentialProtocol,
-  V1ProofProtocol,
 } from '@aries-framework/anoncreds'
 import { AnonCredsRsModule } from '@aries-framework/anoncreds-rs'
 import { AskarModule } from '@aries-framework/askar'
@@ -25,7 +21,6 @@ import {
   Agent,
   HttpOutboundTransport,
 } from '@aries-framework/core'
-import { IndySdkAnonCredsRegistry, IndySdkModule, IndySdkSovDidResolver } from '@aries-framework/indy-sdk'
 import { IndyVdrIndyDidResolver, IndyVdrAnonCredsRegistry, IndyVdrModule } from '@aries-framework/indy-vdr'
 import { agentDependencies, HttpInboundTransport } from '@aries-framework/node'
 import { anoncreds } from '@hyperledger/anoncreds-nodejs'
@@ -104,9 +99,6 @@ export class BaseAgent {
 }
 
 function getAskarAnonCredsIndyModules() {
-  const legacyIndyCredentialFormatService = new LegacyIndyCredentialFormatService()
-  const legacyIndyProofFormatService = new LegacyIndyProofFormatService()
-
   return {
     connections: new ConnectionsModule({
       autoAcceptConnections: true,
@@ -114,22 +106,16 @@ function getAskarAnonCredsIndyModules() {
     credentials: new CredentialsModule({
       autoAcceptCredentials: AutoAcceptCredential.ContentApproved,
       credentialProtocols: [
-        new V1CredentialProtocol({
-          indyCredentialFormat: legacyIndyCredentialFormatService,
-        }),
         new V2CredentialProtocol({
-          credentialFormats: [legacyIndyCredentialFormatService, new AnonCredsCredentialFormatService()],
+          credentialFormats: [ new AnonCredsCredentialFormatService()],
         }),
       ],
     }),
     proofs: new ProofsModule({
       autoAcceptProofs: AutoAcceptProof.ContentApproved,
       proofProtocols: [
-        new V1ProofProtocol({
-          indyProofFormat: legacyIndyProofFormatService,
-        }),
         new V2ProofProtocol({
-          proofFormats: [legacyIndyProofFormatService, new AnonCredsProofFormatService()],
+          proofFormats: [new AnonCredsProofFormatService()],
         }),
       ],
     }),
