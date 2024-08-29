@@ -21,7 +21,7 @@ import {
   Agent,
   HttpOutboundTransport,
 } from '@aries-framework/core'
-import { IndyVdrIndyDidResolver, IndyVdrAnonCredsRegistry, IndyVdrModule } from '@aries-framework/indy-vdr'
+import { IndyVdrIndyDidResolver, IndyVdrAnonCredsRegistry, IndyVdrModule,IndyVdrIndyDidRegistrar } from '@aries-framework/indy-vdr'
 import { agentDependencies, HttpInboundTransport } from '@aries-framework/node'
 import { anoncreds } from '@hyperledger/anoncreds-nodejs'
 import { ariesAskar, ariesAskarNodeJS } from '@hyperledger/aries-askar-nodejs'
@@ -131,6 +131,7 @@ function getAskarAnonCredsIndyModules() {
     }),
     dids: new DidsModule({
       resolvers: [new IndyVdrIndyDidResolver()],
+      registrars: [new IndyVdrIndyDidRegistrar],
     }),
     askar: new AskarModule({
       ariesAskar,
