@@ -1,41 +1,109 @@
-import type { BaseRecordConstructor, ConnectionRecord, CredentialExchangeRecord, ProofExchangeRecord, TagsBase,SelectCredentialsForProofRequestReturn } from '@aries-framework/core'
+import type { BaseRecordConstructor, ConnectionRecord, CredentialExchangeRecord, ProofExchangeRecord, TagsBase,SelectCredentialsForProofRequestReturn,DidCreateResult } from '@aries-framework/core'
 
+import { Buffer as ariesBuffer } from '@aries-framework/core'
 import { BaseAgent } from './BaseAgent'
 import { greenText, Output, redText } from './OutputClass'
-import {AskarStorageService} from '@aries-framework/askar'
-import { AgentContext, BaseRecord } from '@aries-framework/core';
+import {AskarStorageService,AskarWallet} from '@aries-framework/askar'
+import { AgentContext, BaseRecord,InjectionSymbols,KeyType,TypedArrayEncoder,SigningProviderRegistry, isValidPrivateKey } from '@aries-framework/core';
+import { AnonCredsLinkSecretRepository } from '@aries-framework/anoncreds';
+import {Key as AskarKey, KeyAlgs} from '@hyperledger/aries-askar-shared'
+import {randomBytes,generateKeyPairSync,sign,verify, KeyLike} from 'crypto'
+import { IItemObject } from './interfaces/IItemObject'
+import { CustomRecord } from './interfaces/record'
+import { asArray } from '@aries-framework/core/build/utils'
 
 
-class CustomRecord extends BaseRecord{
-  public getTags(): TagsBase{
-    return {}
-  }
-}
 export class Alice extends BaseAgent {
+  public did:string
+  public storage:AskarStorageService<CustomRecord>
   public connected: boolean
   public connectionRecordFaberId?: string
 
   public constructor(port: number, name: string, pw:string) {
     super({ port, name, pw })
     this.connected = false
+    this.did="";
+    this.storage = new AskarStorageService
   }
 
   public static async build(walletName:string, walletPw:string): Promise<Alice> {
     const alice = new Alice(3006, walletName, walletPw)
-    await alice.initializeAgent()
+    await alice.initializeAgent();
+
+    const record = await alice.getDids();
+    if(record.length===0) {
+      alice.did = await alice.createDid();
+      console.log(alice.did)
+    }
+    else{
+      alice.did=record[1]["did"];
+      console.log(alice.did);
+    }
+  
+    //const linkSecretRepository = alice.agent.context.dependencyManager.resolve(AnonCredsLinkSecretRepository);
+    // await linkSecretRepository.findDefault(alice.agent.context);
+    // await linkSecretRepository.deleteById(alice.agent.context,"0a44a42a-f799-44cb-a302-2cb7ba2a7b04")
+    // const res = await linkSecretRepository.findByQuery(alice.agent.context,{"isDefault":true})
+    // console.log(res)
     return alice
   }
 
+  public async getDids(){
+    const record = await this.agent.dids.getCreatedDids({method:"indy"}); // indy did record를 getCreatedDids 전부
+    return record;
+  }
+  public async createDid():Promise<string>{
+    /*
+      did값을 넣으면 외부에서 생성한 did를 import할 수 있다. internal 방식으로 create할려면 endoser의 did와 seed가 wallet에 등록되어잇어야한다.
+      1회만 시행하면됨.
+    */
+    await this.agent.dids.import({ 
+      did:process.env.BCOVRINENDORSERDID as string,
+      privateKeys: [
+        {
+          keyType: KeyType.Ed25519,
+          privateKey: TypedArrayEncoder.fromString(process.env.BCOVRINSEED as string),
+        },
+      ],
+      overwrite:true,
+    });
+
+    const buffer = randomBytes(32);
+    const randomKeyBuffer = new ariesBuffer(buffer);
+    const key = AskarKey.fromSecretBytes({secretKey:randomKeyBuffer,algorithm:KeyAlgs.Ed25519});
+    this.saveItems("key",{publicKey:key.publicBytes.toString(),privateKey:key.secretBytes.toString()});
+    const indyDocument: DidCreateResult = await this.agent.dids.create({
+      method: 'indy',
+      // the secret contains a the verification method type and id
+      options:{
+        endorserDid: process.env.BCOVRINENDORSERDID,
+        endorserMode:'internal',
+      },
+      secret:{
+        privateKey:randomKeyBuffer
+      },
+    });
+    // did의 namespaceIdentifer는 publicKey에 대해 sha-256해시함수를 적용하고 처음 16바이트에 대해 Base58로 인코딩한결과
+    const did :string = indyDocument.didState.did as string;
+    return did;
+  }
+  private async saveItems(id:string,item:IItemObject){
+    const record:BaseRecord = new CustomRecord
+    record.id= id;
+    for(const [key,val] of Object.entries(item)){
+      record.metadata.set(key,[val])
+    }
+    this.save(record);
+  }
+
   private async save(record:BaseRecord){
-    const storage = new AskarStorageService;
-    storage.save(this.agent.context,record);
+    this.storage.save(this.agent.context,record);
   }
   
   private async getById(recordClass:BaseRecordConstructor<CustomRecord>, id:string):Promise<BaseRecord<TagsBase,TagsBase,{}>  | null>{
-    const storage = new AskarStorageService;
     let record;
     try{
-      record = await storage.getById(this.agent.context,recordClass,id);
+      record = await this.storage.getById(this.agent.context,recordClass,id);
       console.log(record.metadata);
     }catch{
       record=null
@@ -44,10 +112,9 @@ export class Alice extends BaseAgent {
   }
 
   private async deleteById(id:string){
-    const storage = new AskarStorageService;
     const record:BaseRecord = new CustomRecord();
     record.id=id;
-    const res = await storage.delete(this.agent.context,record)
+    const res = await this.storage.delete(this.agent.context,record)
   }
 
   private async getConnectionRecord() {
