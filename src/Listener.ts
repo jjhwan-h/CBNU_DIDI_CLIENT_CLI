@@ -1,6 +1,6 @@
 import type { Alice } from './Alice'
 import {Key as AskarKey, KeyAlgs} from '@hyperledger/aries-askar-shared'
-import type { AliceInquirer } from './AliceInquirer'
+import { AliceInquirer } from './AliceInquirer'
 import type {
   Agent,
   BasicMessageStateChangedEvent,
@@ -27,6 +27,19 @@ import { ui } from 'inquirer'
 import { Color, purpleText } from './OutputClass'
 import { toBase64 } from './utils'
 
+interface candidateInfo{
+  id:Number,
+  num:Number,
+  name:String,
+  gender:String,
+  age:String,
+  img:String,
+  desc:String,
+  createdAt:Date,
+  updatedAt:Date,
+  RoomId:Number
+};
+
 export class Listener {
   public on: boolean
   private ui: BottomBar
@@ -46,11 +59,12 @@ export class Listener {
     }
   }
 
-  private async newCredentialPrompt(credentialRecord: CredentialExchangeRecord, aliceInquirer: AliceInquirer) {
+  private async newCredentialPrompt(alice: Alice, credentialRecord: CredentialExchangeRecord, aliceInquirer: AliceInquirer) {
     this.printCredentialAttributes(credentialRecord)
     this.turnListenerOn()
     await aliceInquirer.acceptCredentialOffer(credentialRecord)
     this.turnListenerOff()
+    alice.agent.connections.deleteById(alice.connectionRecordFaberId!);
     await aliceInquirer.processAnswer()
   }
 
@@ -67,13 +81,14 @@ export class Listener {
       CredentialEventTypes.CredentialStateChanged,
       async ({ payload }: CredentialStateChangedEvent) => {
         if (payload.credentialRecord.state === CredentialState.OfferReceived) {
-          await this.newCredentialPrompt(payload.credentialRecord, aliceInquirer)
+          await this.newCredentialPrompt(alice, payload.credentialRecord, aliceInquirer)
         }
       }
     )
   }
 
-  public async messageListener(alice: Alice, name: string) : Promise<any> {
+  public async messageListener(alice: Alice, aliceInquirer:AliceInquirer, name: string) : Promise<any> {
+    this.turnListenerOn()
     alice.agent.events.on(BasicMessageEventTypes.BasicMessageStateChanged, async (event: BasicMessageStateChangedEvent) => {
       if (event.payload.basicMessageRecord.role === BasicMessageRole.Receiver) {
         this.ui.updateBottomBar(purpleText(`\n${name} received a message: ${event.payload.message.content}\n`))
@@ -98,22 +113,37 @@ export class Listener {
             } 
           }
           else if(jsonObject.hasOwnProperty("voteMessage")){
-            console.log(jsonObject.voteMessage);
+            const voteDesc = jsonObject.voteMessage;
+            let candidateString = " ";
+            // console.log(voteDesc);
             /*TODO:: 사용자가 후보를 선택하도록 변경 */
-            alice.sendMessage("12");
+            candidateString += `==== ${voteDesc.roomNum}번방 ${voteDesc.roomName} ====\n`;
+            voteDesc.candidateInfo.forEach((el :candidateInfo) => {
+              candidateString+=`사진: ${el.img}\n`;
+              candidateString+=`후보 번호: ${el.num}\n`;
+              candidateString+=`이름: ${el.name}\n`;
+              candidateString+="+++++++++++++++++++++++++++++++++++++++";
+            });
+            const confirm = await aliceInquirer.acceptCandidateSelection(candidateString);
+            await alice.sendMessage(confirm.input);
+
+            alice.agent.connections.deleteById(alice.connectionRecordFaberId!);
+            this.turnListenerOff();
+            await aliceInquirer.processAnswer();
           }
         }catch (err){
           console.log(err);
         }
       }
     })
+    this.turnListenerOff()
   }
 
   private async newProofRequestPrompt(proofRecord: ProofExchangeRecord, aliceInquirer: AliceInquirer) {
     this.turnListenerOn()
     await aliceInquirer.acceptProofRequest(proofRecord)
     this.turnListenerOff()
-    await aliceInquirer.processAnswer()
+    // await aliceInquirer.processAnswer()
   }
 
   public proofRequestListener(alice: Alice, aliceInquirer: AliceInquirer) {

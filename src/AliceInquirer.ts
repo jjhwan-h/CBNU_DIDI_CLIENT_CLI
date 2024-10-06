@@ -53,7 +53,7 @@ export class AliceInquirer extends BaseInquirer {
     this.alice = alice
     this.listener = new Listener()
     this.promptOptionsString = Object.values(PromptOptions)
-    this.listener.messageListener(this.alice, this.alice.name)
+    this.listener.messageListener(this.alice, this, this.alice.name)
   }
 
   public static async build(): Promise<AliceInquirer> {
@@ -188,6 +188,12 @@ export class AliceInquirer extends BaseInquirer {
           await this.alice.agent.proofs.declineRequest({ proofRecordId: proofRecord.id })
         }
     }
+  }
+
+  public async acceptCandidateSelection(candidateString: String){
+    console.log(purpleText("\n"+candidateString));
+    const confirm = await prompt([this.inquireInput(Title.CandidateSelectionTitle)]);
+    return confirm;
   }
 
   public async connection() {
