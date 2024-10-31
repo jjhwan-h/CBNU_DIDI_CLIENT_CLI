@@ -64,7 +64,6 @@ export class Listener {
     this.turnListenerOn()
     await aliceInquirer.acceptCredentialOffer(credentialRecord)
     this.turnListenerOff()
-    alice.agent.connections.deleteById(alice.connectionRecordFaberId!);
     await aliceInquirer.processAnswer()
   }
 
@@ -91,11 +90,11 @@ export class Listener {
     this.turnListenerOn()
     alice.agent.events.on(BasicMessageEventTypes.BasicMessageStateChanged, async (event: BasicMessageStateChangedEvent) => {
       if (event.payload.basicMessageRecord.role === BasicMessageRole.Receiver) {
-        this.ui.updateBottomBar(purpleText(`\n${name} received a message: ${event.payload.message.content}\n`))
         //did auth를 위한 문자열 수신
         try{
           const jsonObject = JSON.parse(event.payload.message.content);
           if (jsonObject.hasOwnProperty("DIDMessage")){
+            this.ui.updateBottomBar(purpleText(`\n${name} received a message: ${event.payload.message.content}\n`))
             const record = await alice.storage.getById(alice.agent.context,CustomRecord,"key") as unknown as DidRecord
             const val = record.metadata.get("privateKey") as Array<string>;
             const privateKey = val[0].split(',');
@@ -116,18 +115,17 @@ export class Listener {
             const voteDesc = jsonObject.voteMessage;
             let candidateString = " ";
             // console.log(voteDesc);
-            /*TODO:: 사용자가 후보를 선택하도록 변경 */
-            candidateString += `==== ${voteDesc.roomNum}번방 ${voteDesc.roomName} ====\n`;
+            candidateString += `========== ${voteDesc.roomNum}번방 ${voteDesc.roomName} ==========\n`;
             voteDesc.candidateInfo.forEach((el :candidateInfo) => {
               candidateString+=`사진: ${el.img}\n`;
               candidateString+=`후보 번호: ${el.num}\n`;
               candidateString+=`이름: ${el.name}\n`;
-              candidateString+="+++++++++++++++++++++++++++++++++++++++";
+              candidateString+="============================\n";
             });
             const confirm = await aliceInquirer.acceptCandidateSelection(candidateString);
             await alice.sendMessage(confirm.input);
 
-            alice.agent.connections.deleteById(alice.connectionRecordFaberId!);
+            // alice.agent.connections.deleteById(alice.connectionRecordFaberId!);
             this.turnListenerOff();
             await aliceInquirer.processAnswer();
           }

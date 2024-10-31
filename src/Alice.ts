@@ -5,14 +5,15 @@ import { BaseAgent } from './BaseAgent'
 import { greenText, Output, redText } from './OutputClass'
 import {AskarStorageService,AskarWallet} from '@aries-framework/askar'
 import { AgentContext, BaseRecord,InjectionSymbols,KeyType,TypedArrayEncoder,SigningProviderRegistry, isValidPrivateKey } from '@aries-framework/core';
-import { AnonCredsLinkSecretRepository } from '@aries-framework/anoncreds';
+import { AnonCredsCredentialRepository, AnonCredsLinkSecretRepository } from '@aries-framework/anoncreds';
 import {Key as AskarKey, KeyAlgs} from '@hyperledger/aries-askar-shared'
 import {randomBytes,generateKeyPairSync,sign,verify, KeyLike} from 'crypto'
 import { IItemObject } from './interfaces/IItemObject'
 import { CustomRecord } from './interfaces/record'
-import { asArray } from '@aries-framework/core/build/utils'
+import dotenv from 'dotenv'
+import { agentDependencies } from '@aries-framework/node'
 
-
+dotenv.config();
 export class Alice extends BaseAgent {
   public did:string
   public storage:AskarStorageService<CustomRecord>
@@ -29,13 +30,15 @@ export class Alice extends BaseAgent {
   }
 
   public static async build(walletName:string, walletPw:string): Promise<Alice> {
-    const alice = new Alice(3006, walletName, walletPw)
+    const alice = new Alice(4003, walletName, walletPw)
     await alice.initializeAgent();
 
-    // console.log(await alice.agent.proofs.getAll());
+    //console.log(await alice.agent.proofs.getAll());
     // const requestedCredentials = await alice.agent.proofs.getCredentialsForRequest({
-    //   proofRecordId: 'e1e8454c-65b7-40e3-9f0a-51de8898bef9'
-    // }
+    //   proofRecordId: '5fb01cb8-93fa-4044-b304-c7109a1b2be8'
+    // })
+
+    // console.log(JSON.stringify(requestedCredentials.proofFormats.anoncreds?.attributes));
 
     const record = await alice.getDids();
     if(record.length===0) {
@@ -46,12 +49,6 @@ export class Alice extends BaseAgent {
       alice.did=record[0]["did"];
       console.log(alice.did);
     }
-  
-    //const linkSecretRepository = alice.agent.context.dependencyManager.resolve(AnonCredsLinkSecretRepository);
-    // await linkSecretRepository.findDefault(alice.agent.context);
-    // await linkSecretRepository.deleteById(alice.agent.context,"0a44a42a-f799-44cb-a302-2cb7ba2a7b04")
-    // const res = await linkSecretRepository.findByQuery(alice.agent.context,{"isDefault":true})
-    // console.log(res)
     return alice
   }
 
@@ -74,7 +71,6 @@ export class Alice extends BaseAgent {
       ],
       overwrite:true,
     });
-
     const buffer = randomBytes(32);
     const randomKeyBuffer = new ariesBuffer(buffer);
     const key = AskarKey.fromSecretBytes({secretKey:randomKeyBuffer,algorithm:KeyAlgs.Ed25519});
@@ -94,6 +90,7 @@ export class Alice extends BaseAgent {
     const did :string = indyDocument.didState.did as string;
     return did;
   }
+  
   private async saveItems(id:string,item:IItemObject){
     const record:BaseRecord = new CustomRecord
     record.id= id;
@@ -160,7 +157,6 @@ export class Alice extends BaseAgent {
   }
 
   public async acceptProofRequest(proofRecord: ProofExchangeRecord, requestedCredentials:SelectCredentialsForProofRequestReturn) {
-
     await this.agent.proofs.acceptRequest({
       proofRecordId: proofRecord.id,
       proofFormats: requestedCredentials.proofFormats,

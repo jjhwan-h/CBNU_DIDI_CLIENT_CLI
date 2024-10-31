@@ -6,6 +6,10 @@ import {
   AnonCredsCredentialFormatService,
   AnonCredsModule,
   AnonCredsProofFormatService,
+  LegacyIndyCredentialFormatService,
+  LegacyIndyProofFormatService,
+  V1CredentialProtocol,
+  V1ProofProtocol,
 } from '@aries-framework/anoncreds'
 import { AnonCredsRsModule } from '@aries-framework/anoncreds-rs'
 import { AskarModule } from '@aries-framework/askar'
@@ -24,7 +28,7 @@ import {
 import { IndyVdrIndyDidResolver, IndyVdrAnonCredsRegistry, IndyVdrModule,IndyVdrIndyDidRegistrar } from '@aries-framework/indy-vdr'
 import { agentDependencies, HttpInboundTransport } from '@aries-framework/node'
 import { anoncreds } from '@hyperledger/anoncreds-nodejs'
-import { ariesAskar, ariesAskarNodeJS } from '@hyperledger/aries-askar-nodejs'
+import { ariesAskar } from '@hyperledger/aries-askar-nodejs'
 import { indyVdr } from '@hyperledger/indy-vdr-nodejs'
 import { randomUUID } from 'crypto'
 
@@ -99,6 +103,9 @@ export class BaseAgent {
 }
 
 function getAskarAnonCredsIndyModules() {
+  const legacyIndyCredentialFormatService = new LegacyIndyCredentialFormatService()
+  const legacyIndyProofFormatService = new LegacyIndyProofFormatService()
+
   return {
     connections: new ConnectionsModule({
       autoAcceptConnections: true,
@@ -106,16 +113,22 @@ function getAskarAnonCredsIndyModules() {
     credentials: new CredentialsModule({
       autoAcceptCredentials: AutoAcceptCredential.ContentApproved,
       credentialProtocols: [
+        new V1CredentialProtocol({
+          indyCredentialFormat: legacyIndyCredentialFormatService,
+        }),
         new V2CredentialProtocol({
-          credentialFormats: [ new AnonCredsCredentialFormatService()],
+          credentialFormats: [legacyIndyCredentialFormatService, new AnonCredsCredentialFormatService()],
         }),
       ],
     }),
     proofs: new ProofsModule({
       autoAcceptProofs: AutoAcceptProof.ContentApproved,
       proofProtocols: [
+        new V1ProofProtocol({
+          indyProofFormat: legacyIndyProofFormatService,
+        }),
         new V2ProofProtocol({
-          proofFormats: [new AnonCredsProofFormatService()],
+          proofFormats: [legacyIndyProofFormatService, new AnonCredsProofFormatService()],
         }),
       ],
     }),
@@ -133,7 +146,7 @@ function getAskarAnonCredsIndyModules() {
       resolvers: [new IndyVdrIndyDidResolver()],
       registrars: [new IndyVdrIndyDidRegistrar],
     }),
-    askar: new AskarModule({
+    ariesAskar: new AskarModule({
       ariesAskar,
     }),
   } as const

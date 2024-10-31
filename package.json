@@ -9,25 +9,28 @@
     },
     "dependencies": {
         "@hyperledger/anoncreds-nodejs": "^0.1.0",
-        "@hyperledger/aries-askar-nodejs": "^0.1.0",
+        "@hyperledger/aries-askar-nodejs": "0.1.0",
         "@hyperledger/indy-vdr-nodejs": "^0.1.0",
+        "@hyperledger/aries-askar-shared": "0.1.0",
         "dotenv": "^16.4.5",
         "inquirer": "^8.2.5"
     },
     "devDependencies": {
-        "@aries-framework/anoncreds": "*",
-        "@aries-framework/anoncreds-rs": "*",
-        "@aries-framework/askar": "*",
-        "@aries-framework/cheqd": "*",
-        "@aries-framework/core": "*",
-        "@aries-framework/indy-sdk": "*",
-        "@aries-framework/indy-vdr": "*",
-        "@aries-framework/node": "*",
+        "@aries-framework/anoncreds": "^0.4.0",
+        "@aries-framework/anoncreds-rs": "^0.4.0",
+        "@aries-framework/askar": "^0.4.0",
+        "@aries-framework/core": "^0.4.0",
+        "@aries-framework/indy-sdk": "^0.4.0",
+        "@aries-framework/indy-vdr": "^0.4.0",
+        "@aries-framework/node": "^0.4.0",
         "@types/figlet": "^1.5.4",
         "@types/indy-sdk": "^1.16.26",
         "@types/inquirer": "^8.2.6",
         "clear": "^0.1.0",
         "figlet": "^1.5.2",
         "ts-node": "^10.4.0"
+    },
+    "resolutions": {
+      "ref-napi": "npm:@2060.io/ref-napi"
     }
 }

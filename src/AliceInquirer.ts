@@ -110,16 +110,21 @@ export class AliceInquirer extends BaseInquirer {
   }
 
   public async getPresentationRecord(){
-    const result = await this.alice.agent.proofs.getAll()
-
-    result.forEach((el)=>{
-      console.log(`\n${JSON.stringify(el)}\n`)
+    const predentials = await this.alice.agent.proofs.getAll()
+    const lenPred = predentials.length
+    if (lenPred==0){
+      return null
+    }
+    predentials.forEach((el,idx)=>{
+      console.log("#"+idx);
+      console.log("[id]:",el.id);
+      console.log(el.toJSON());
+      console.log("======================================\n");
     })
-    return
   }
   public async deleteCredentials(){
     const hasCred = await this.getCredentials();
-    if(hasCred){
+    if(hasCred!==0){
       const title = Title.DeleteCredentialTitle;
       const choice = await prompt([this.inquireInput(title)]);
       await this.alice.agent.credentials.deleteById(choice.input);
@@ -130,19 +135,20 @@ export class AliceInquirer extends BaseInquirer {
     }
    
   }
-  public async getCredentials(){
+ public async getCredentials(){
     const credentials = await this.alice.agent.credentials.getAll();
-    const lenCred = credentials.length
+    const lenCred = credentials.length;
     if (lenCred==0){
       return null
     }
-    credentials.forEach((el)=>{
+    credentials.forEach((el,idx)=>{
+      console.log("#"+(idx+1));
       console.log("[id]:",el.id);
       console.log(el.credentialAttributes);
       console.log("======================================\n");
     })
     return lenCred
-  }
+}
 
   public async acceptCredentialOffer(credentialRecord: CredentialExchangeRecord) {
     const confirm = await prompt([this.inquireConfirmation(Title.CredentialOfferTitle)])
